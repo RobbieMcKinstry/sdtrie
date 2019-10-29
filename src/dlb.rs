@@ -90,8 +90,6 @@ impl DLB {
     }
 
     pub fn case_general(&mut self, mut bytes: CharList) -> Identifier {
-        // TODO WARNING: This will leak additional ids on the occasion that
-        // the string is already in the list.
         match self.root.as_mut().unwrap() {
             DLBNode::Leaf(_) => unreachable!("Root is always an internal node"),
             DLBNode::Internal(data) => {

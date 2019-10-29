@@ -57,6 +57,7 @@ impl InternalData {
                 best_index = Some(index);
                 max = next_count;
             }
+            index += 1;
         }
         (best_index, max)
     }
