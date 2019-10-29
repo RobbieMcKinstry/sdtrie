@@ -10,6 +10,14 @@ pub struct InternalData {
 }
 
 impl InternalData {
+    pub fn new(bytes: CharList, complete: IsComplete, children: Vec<DLBNode>) -> Self {
+        Self {
+            bytes,
+            children,
+            maybe_id: complete,
+        }
+    }
+
     pub fn bytes(&self) -> &CharList {
         &self.bytes
     }
@@ -20,6 +28,27 @@ impl InternalData {
 
     pub fn children(&self) -> &Vec<DLBNode> {
         &self.children
+    }
+
+    pub fn add_child(&mut self, node: DLBNode) {
+        self.children.push(node);
+    }
+
+    /// `find_best_child` checks all children for the
+    /// one which has the highest similarity to this pattern.
+    /// It returns the children with the highest value and that value.
+    pub fn find_best_child(&self, pattern: CharList) -> (Option<&mut DLBNode>, usize) {
+        let mut max = 0;
+        let mut best = None;
+        for child in self.children().iter_mut() {
+            let next_count = child.similar_bytes(pattern.clone());
+            if next_count > max {
+                max = next_count;
+                best = Some(child);
+            }
+        }
+
+        (best, max)
     }
 
     pub fn similar_bytes(&self, pattern: CharList) -> usize {

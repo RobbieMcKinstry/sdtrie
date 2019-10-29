@@ -24,6 +24,7 @@ impl DLBNode {
                 // Case 2: Partial Match
 
                 // Case 3: No match.
+                // If I have no similarity
 
                 // Else:
                 //    with the remaining bytes, convert self into an internal_node.
