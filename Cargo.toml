@@ -1,0 +1,16 @@
+[package]
+name = "sdtrie"
+version = "0.1.0"
+authors = ["Felix I. Bracken <thesnowmancometh@gmail.com>"]
+edition = "2018"
+description = "A dynamic trie which you can pack into a fast, static, succinct trie."
+repository = "https://github.com/RobbieMcKinstry/sdtrie"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+categories = ["algorithms", "data-structures"]
+keywords = ["trie", "strings", "interning", "string-interning", "succinct", "fst", "fast-succinct-trie"]
+license = "MIT"
+maintenance = { status = "actively-developed" }
+
+[dependencies]
