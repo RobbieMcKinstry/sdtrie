@@ -1,4 +1,6 @@
+use crate::char_list::CharList;
 use crate::dlb_node::DLBNode;
+use crate::leaf_data::LeafData;
 use crate::Identifier;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -47,9 +49,20 @@ impl DLB {
         root_node.get(byte_pattern)
     }
 
-    //fn intern(&mut self, contents: String) -> Identifier {
-    //     Identifier::from(0)
-    //}
+    pub fn get_or_intern(&mut self, s: String) -> Identifier {
+        // Check if root is empty:
+        let bytes = CharList::from(s.into_bytes());
+        if self.is_empty() {
+            // Make a new leaf node.
+            let id = self.new_id();
+            let new_node_data = LeafData::new(id, bytes);
+            let new_node = DLBNode::Leaf(new_node_data);
+            self.root = Some(new_node);
+            return id;
+        }
+
+        self.root.as_mut().unwrap().insert(bytes)
+    }
 }
 
 #[cfg(test)]

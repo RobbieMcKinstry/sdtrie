@@ -1,3 +1,4 @@
+use crate::char_list::CharList;
 use crate::internal_data::InternalData;
 use crate::leaf_data::LeafData;
 use crate::Identifier;
@@ -8,6 +9,39 @@ pub enum DLBNode {
 }
 
 impl DLBNode {
+    pub fn insert(&mut self, pattern: CharList) -> Identifier {
+        match self {
+            DLBNode::Leaf(data) => {
+                // Consume any if the characters in pattern which match on
+                // data.bytes().
+                let similarity = data.similar_bytes(pattern.clone());
+                // Case 1: Full match
+                // If no bytes remain, return my integer.
+                if similarity == pattern.len() {
+                    return data.id();
+                }
+
+                // Case 2: Partial Match
+
+                // Case 3: No match.
+
+                // Else:
+                //    with the remaining bytes, convert self into an internal_node.
+                //    Add a child with the remaining bytes.
+            }
+            DLBNode::Internal(data) => {}
+        }
+
+        Identifier::from(0)
+    }
+
+    pub fn similar_bytes(&self, pattern: CharList) -> usize {
+        match self {
+            DLBNode::Leaf(data) => data.similar_bytes(pattern),
+            DLBNode::Internal(data) => data.similar_bytes(pattern),
+        }
+    }
+
     pub fn get(&self, pattern: &[u8]) -> Option<Identifier> {
         match self {
             DLBNode::Leaf(data) => {
