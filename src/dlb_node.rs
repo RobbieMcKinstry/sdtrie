@@ -2,6 +2,7 @@ use crate::char_list::CharList;
 use crate::internal_data::InternalData;
 use crate::leaf_data::LeafData;
 use crate::Identifier;
+use std::sync::atomic::AtomicU64;
 
 pub enum DLBNode {
     Leaf(LeafData),
@@ -9,7 +10,7 @@ pub enum DLBNode {
 }
 
 impl DLBNode {
-    pub fn insert(&mut self, pattern: CharList) -> Identifier {
+    pub fn insert(&mut self, pattern: CharList, next_id: &mut AtomicU64) -> Identifier {
         match self {
             DLBNode::Leaf(data) => {
                 // Consume any if the characters in pattern which match on

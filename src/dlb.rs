@@ -62,60 +62,74 @@ impl DLB {
         root_node.get(byte_pattern)
     }
 
-    pub fn get_or_intern(&mut self, s: String) -> Identifier {
-        // Check if root is empty:
-        let mut bytes = CharList::from(s.clone().into_bytes());
-        // Special case where the input string is empty.
-        if s.is_empty() {
-            match self.contains_empty {
-                Some(id) => return id,
-                None => {
-                    let id = self.new_id();
-                    self.contains_empty = Some(id);
-                    return id;
+    pub fn case_empty_string(&mut self) -> Identifier {
+        match self.contains_empty {
+            Some(id) => id,
+            None => {
+                let id = self.new_id();
+                self.contains_empty = Some(id);
+                id
+            }
+        }
+    }
+
+    pub fn case_empty_trie(&mut self, bytes: CharList) -> Identifier {
+        // Make a new leaf node.
+        let id = self.new_id();
+        let new_node_data = LeafData::new(id, bytes);
+        let new_leaf = DLBNode::Leaf(new_node_data);
+
+        // Then, make a special internal node with an empty transition
+        let new_empty_list = CharList::empty();
+        //    Make a list of children for the new internal node about to be built
+        //    It should be composed of the new leaf only.
+        let new_children = vec![new_leaf];
+        let new_internal_data = InternalData::new(new_empty_list, None, new_children);
+        self.root = Some(DLBNode::Internal(new_internal_data));
+        id
+    }
+
+    pub fn case_general(&mut self, mut bytes: CharList) -> Identifier {
+        // TODO WARNING: This will leak additional ids on the occasion that
+        // the string is already in the list.
+        match self.root.as_mut().unwrap() {
+            DLBNode::Leaf(_) => unreachable!("Root is always an internal node"),
+            DLBNode::Internal(data) => {
+                let (child_index, count) = data.find_best_child(bytes.clone());
+                // Destructure the result, and recurse.
+                if let Some(idx) = child_index {
+                    let remaining = bytes.split_off(count);
+                    data.insert_at_index(idx, remaining, &mut self.next_id)
+                } else {
+                    // Ain't nobody matching this node.
+                    // Add it directly as a leaf off of the root.
+                    let new_node_data = LeafData::new_from_generator(bytes, &mut self.next_id);
+                    let id = new_node_data.id();
+                    let new_leaf = DLBNode::Leaf(new_node_data);
+                    data.add_child(new_leaf);
+                    id
                 }
             }
+        }
+    }
+
+    pub fn get_or_intern(&mut self, s: String) -> Identifier {
+        // Check if root is empty:
+        let bytes = CharList::from(s.clone().into_bytes());
+        // Special case where the input string is empty.
+        if s.is_empty() {
+            return self.case_empty_string();
         }
 
         // Special case where the trie itself is empty.
         if self.is_empty() {
-            // Make a new leaf node.
-            let id = self.new_id();
-            let new_node_data = LeafData::new(id, bytes);
-            let new_leaf = DLBNode::Leaf(new_node_data);
-
-            // Then, make a special internal node with an empty transition
-            let new_empty_list = CharList::empty();
-            //    Make a list of children for the new internal node about to be built
-            //    It should be composed of the new leaf only.
-            let new_children = vec![new_leaf];
-            let new_internal_data = InternalData::new(new_empty_list, None, new_children);
-            self.root = Some(DLBNode::Internal(new_internal_data));
-            return id;
+            return self.case_empty_trie(bytes);
         }
 
         // Now we know the root isn't empty.
         // Because of our special casing above, we
         // also know the root isn't a leaf.
-        match self.root.as_mut().unwrap() {
-            DLBNode::Leaf(_) => unreachable!("Root is always an internal node"),
-            DLBNode::Internal(data) => {
-                let (best, count) = data.find_best_child(bytes.clone());
-                // Destructure the result, and recurse.
-                if let Some(next) = best {
-                    let remaining = bytes.split_off(count);
-                    return next.insert(remaining);
-                } else {
-                    // Ain't nobody matching this node.
-                    // Add it directly as a leaf off of the root.
-                    let id = self.new_id();
-                    let new_node_data = LeafData::new(id, bytes);
-                    let new_leaf = DLBNode::Leaf(new_node_data);
-                    data.add_child(new_leaf);
-                    return id;
-                }
-            }
-        }
+        self.case_general(bytes)
 
         /*
         // TODO add a check for the root being an internal node.
