@@ -1,21 +1,18 @@
+use crate::dlb_node::DLBNode;
 use crate::Identifier;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct DLB {
     root: Option<DLBNode>,
-}
-
-type IsComplete = bool;
-
-type CharList = Vec<u8>;
-
-enum DLBNode {
-    Leaf(CharList),
-    Internal(CharList, IsComplete, Vec<DLBNode>),
+    next_id: AtomicU64,
 }
 
 impl DLB {
     pub fn new() -> Self {
-        return Self { root: None };
+        return Self {
+            root: None,
+            next_id: AtomicU64::new(1),
+        };
     }
 
     pub fn is_empty(&self) -> bool {
@@ -35,36 +32,33 @@ impl DLB {
         root_node.contains(byte_pattern)
     }
 
+    fn new_id(&mut self) -> Identifier {
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        Identifier::from(id)
+    }
+
+    pub fn get(&self, s: String) -> Option<Identifier> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let root_node = self.root.as_ref().unwrap();
+        let byte_pattern = s.as_bytes();
+        root_node.get(byte_pattern)
+    }
+
     //fn intern(&mut self, contents: String) -> Identifier {
     //     Identifier::from(0)
     //}
 }
 
-impl DLBNode {
-    fn contains(&self, pattern: &[u8]) -> bool {
-        match self {
-            DLBNode::Leaf(list) => {
-                // Check if the list matches the rest of the elements:
-                return list.as_slice() == pattern;
-            }
-            DLBNode::Internal(list, complete, next) => {
-                if *complete && pattern.len() == 0 {
-                    return true;
-                }
-                if list.as_slice() != pattern {
-                    return false;
-                }
-                // Else, cut off the prefix from the pattern,
-                // and iterate over the children, ORing the results together.
-                let match_len = list.len();
-                let suffix = &pattern[match_len..];
-                for child in next {
-                    if child.contains(&suffix) {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_empty() {
+        let dlb = DLB::new();
+        assert_eq!(dlb.is_empty(), true);
     }
 }

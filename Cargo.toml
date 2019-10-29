@@ -11,6 +11,5 @@ repository = "https://github.com/RobbieMcKinstry/sdtrie"
 categories = ["algorithms", "data-structures"]
 keywords = ["trie", "strings", "interning", "string-interning", "succinct", "fst", "fast-succinct-trie"]
 license = "MIT"
-maintenance = { status = "actively-developed" }
 
 [dependencies]
