@@ -96,8 +96,12 @@ impl DLB {
                 let (child_index, count) = data.find_best_child(bytes.clone());
                 // Destructure the result, and recurse.
                 if let Some(idx) = child_index {
-                    let remaining = bytes.split_off(count);
-                    data.insert_at_index(idx, remaining, &mut self.next_id)
+                    // TODO fix: you can't eliminate these
+                    // bytes because the count > larger
+                    // than the number of bytes in
+                    // the next node.
+                    // let remaining = bytes.split_off(count);
+                    data.insert_at_index(idx, bytes, &mut self.next_id)
                 } else {
                     // Ain't nobody matching this node.
                     // Add it directly as a leaf off of the root.

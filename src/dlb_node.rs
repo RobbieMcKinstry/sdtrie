@@ -2,7 +2,7 @@ use crate::char_list::CharList;
 use crate::internal_data::InternalData;
 use crate::leaf_data::LeafData;
 use crate::Identifier;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub enum DLBNode {
     Leaf(LeafData),
@@ -10,7 +10,7 @@ pub enum DLBNode {
 }
 
 impl DLBNode {
-    pub fn insert(&mut self, pattern: CharList, next_id: &mut AtomicU64) -> Identifier {
+    pub fn insert(&mut self, mut pattern: CharList, next_id: &mut AtomicU64) -> Identifier {
         match self {
             DLBNode::Leaf(data) => {
                 // Consume any if the characters in pattern which match on
@@ -18,18 +18,35 @@ impl DLBNode {
                 let similarity = data.similar_bytes(pattern.clone());
                 // Case 1: Full match
                 // If no bytes remain, return my integer.
+                // TODO fix this. Don't check against the pattern. Check against self.
                 if similarity == pattern.len() {
                     return data.id();
                 }
+                // Case 2: No match.
+                if similarity == 0 {
+                    unreachable!("Similarity required to have gotten his far");
+                }
 
-                // Case 2: Partial Match
-
-                // Case 3: No match.
-                // If I have no similarity
-
-                // Else:
+                // Case 3: Partial Match
                 //    with the remaining bytes, convert self into an internal_node.
                 //    Add a child with the remaining bytes.
+                let remaining = pattern.split_off(similarity);
+                // Create a new leaf with the remaining bytes.
+                let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                let new_leaf_data = LeafData::new(id, remaining);
+                let new_leaf = DLBNode::Leaf(new_leaf_data);
+                // Make a second leaf with the remaining bytes from self.
+                let remaining_self_bytes: Vec<u8> =
+                    data.bytes().clone().into_iter().skip(similarity).collect();
+                let new_self_data = LeafData::new(data.id(), CharList::from(remaining_self_bytes));
+                let self_node = DLBNode::Leaf(new_self_data);
+                // Create a new internal node with the matching pattern
+                // The new leaf and this node are the children.
+                let new_bytes = pattern;
+                let maybe_id = None;
+                let children = vec![new_leaf, self_node];
+                *self = DLBNode::Internal(InternalData::new(new_bytes, maybe_id, children));
+                return id;
             }
             DLBNode::Internal(data) => {}
         }
