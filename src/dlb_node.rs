@@ -16,18 +16,33 @@ impl DLBNode {
                 // Consume any if the characters in pattern which match on
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
-                // Case 1: Full match
+                // Case 1: Exact match
                 // If no bytes remain, return my integer.
-                // TODO fix this. Don't check against the pattern. Check against self.
-                if similarity == pattern.len() {
+                if similarity == pattern.len() && similarity == data.bytes().len() {
                     return data.id();
                 }
                 // Case 2: No match.
                 if similarity == 0 {
                     unreachable!("Similarity required to have gotten his far");
                 }
+                // Case 3: Patterns matches fully, but pattern.len() > self.data.len()
+                // TODO
+                //    Create an internal node. IsComplete is true.
+                //    Have it's children be a leaf with the remaining bytes.
+                if similarity == data.bytes().len() && pattern.len() < data.bytes().len() {
+                    let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                    let remaining = pattern.split_off(similarity);
+                    let new_leaf_data = LeafData::new(id, remaining);
+                    let new_leaf = DLBNode::Leaf(new_leaf_data);
+                    // Build the internal node
+                    let new_bytes = pattern;
+                    let maybe_id = Some(data.id());
+                    let children = vec![new_leaf];
+                    *self = DLBNode::Internal(InternalData::new(new_bytes, maybe_id, children));
+                    return id;
+                }
 
-                // Case 3: Partial Match
+                // Case 4: Partial Match
                 //    with the remaining bytes, convert self into an internal_node.
                 //    Add a child with the remaining bytes.
                 let remaining = pattern.split_off(similarity);
@@ -48,7 +63,53 @@ impl DLBNode {
                 *self = DLBNode::Internal(InternalData::new(new_bytes, maybe_id, children));
                 return id;
             }
-            DLBNode::Internal(data) => {}
+            DLBNode::Internal(data) => {
+                // Consume any of the characters in pattern which match on
+                // data.bytes().
+                let similarity = data.similar_bytes(pattern.clone());
+                // Case 1: Exact match
+                // In this case, we just need to check the IsComplete field
+                // and perhaps update it.
+                if similarity == pattern.len() && similarity == data.bytes().len() {
+                    if let Some(id) = data.maybe_id() {
+                        return id;
+                    } else {
+                        let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                        data.set_maybe_id(Some(id));
+                        return id;
+                    }
+                }
+                // Case 2: No match.
+                if similarity == 0 {
+                    unreachable!("Similarity required to have gotten his far");
+                }
+                // Case 3: Partial match, where pattern.len() > data.bytes().len()
+                //     In this case, we need to pass the remaining bytes along to our children.
+                //     If our children have no overlap, then we make a new leaf.
+                if similarity == data.bytes().len() && data.bytes().len() < pattern.len() {
+                    // Chop off the matching part.
+                    let remaining = pattern.split_off(similarity);
+                    let (best_index, _count) = data.find_best_child(remaining.clone());
+                    match best_index {
+                        Some(idx) => {
+                            return data.insert_at_index(idx, remaining, next_id);
+                        }
+                        None => {
+                            // Make a new leaf and add it as a child.
+                            let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                            let new_leaf_data = LeafData::new(id, remaining);
+                            let new_leaf = DLBNode::Leaf(new_leaf_data);
+                            data.add_child(new_leaf);
+                            return id;
+                        }
+                    }
+                }
+
+                // Case 4: Partial match, where similarity < data.bytes().
+                //     In this case, we need to make a new internal node for the
+                //     matching patern, and that internal node will point to this node,
+                //     with the matching part removed.`
+            }
         }
 
         Identifier::from(0)

@@ -19,6 +19,10 @@ impl InternalData {
         }
     }
 
+    pub fn set_maybe_id(&mut self, id: IsComplete) {
+        self.maybe_id = id;
+    }
+
     pub fn bytes(&self) -> &CharList {
         &self.bytes
     }
