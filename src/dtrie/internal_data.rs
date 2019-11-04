@@ -1,7 +1,7 @@
-use crate::char_list::CharList;
-use crate::dlb_node::DLBNode;
-use crate::is_complete::IsComplete;
-use crate::Identifier;
+use crate::dtrie::char_list::CharList;
+use crate::dtrie::dlb_node::DLBNode;
+use crate::dtrie::is_complete::IsComplete;
+use crate::dtrie::Identifier;
 use std::sync::atomic::AtomicU64;
 
 pub struct InternalData {

@@ -1,5 +1,5 @@
-use crate::char_list::CharList;
-use crate::Identifier;
+use crate::dtrie::char_list::CharList;
+use crate::dtrie::Identifier;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct LeafData {

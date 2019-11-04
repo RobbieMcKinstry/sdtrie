@@ -1,7 +1,8 @@
-use crate::char_list::CharList;
-use crate::internal_data::InternalData;
-use crate::leaf_data::LeafData;
-use crate::Identifier;
+use crate::dtrie::char_list::CharList;
+use crate::dtrie::internal_data::InternalData;
+use crate::dtrie::leaf_data::LeafData;
+use crate::dtrie::Identifier;
+use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub enum DLBNode {
@@ -123,18 +124,25 @@ impl DLBNode {
     }
 
     pub fn get(&self, pattern: &[u8]) -> Option<Identifier> {
+        println!("Checking node…");
         match self {
             DLBNode::Leaf(data) => {
+                println!("I am a leaf.");
                 // Check if the list matches the rest of the elements:
                 if data.bytes().as_slice() == pattern {
                     return Some(data.id());
                 }
             }
             DLBNode::Internal(data) => {
+                println!("I am internal.");
+                println!("My callee pattern is {}", from_utf8(pattern).unwrap());
                 if pattern.len() == 0 {
                     return data.maybe_id();
                 }
+                let my_pattern = from_utf8(data.bytes().as_slice()).unwrap();
+                println!("Comparing against my pattern {}…", my_pattern);
                 if data.bytes().as_slice() != pattern {
+                    println!("Not matching…");
                     return None;
                 }
                 // Else, cut off the prefix from the pattern,

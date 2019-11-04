@@ -1,8 +1,9 @@
-use crate::char_list::CharList;
-use crate::dlb_node::DLBNode;
-use crate::internal_data::InternalData;
-use crate::leaf_data::LeafData;
-use crate::Identifier;
+use crate::dtrie::char_list::CharList;
+use crate::dtrie::dlb_node::DLBNode;
+use crate::dtrie::internal_data::InternalData;
+use crate::dtrie::leaf_data::LeafData;
+use crate::dtrie::Identifier;
+use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct DLB {
@@ -24,22 +25,31 @@ impl DLB {
 
     pub fn is_empty(&self) -> bool {
         match self.root {
-            Some(_) => true,
-            None => false,
+            Some(_) => false,
+            None => true,
         }
     }
 
     fn contains(&self, s: String) -> bool {
+        println!("Contains called with string {}", s.clone());
         if self.is_empty() {
+            println!("empty");
             return false;
         }
+        println!("Not empty");
 
         if s.is_empty() {
+            println!("String is empty!");
             return self.contains_empty.is_some();
         }
 
         let root_node = self.root.as_ref().unwrap();
         let byte_pattern = s.as_bytes();
+
+        println!(
+            "Passing down the byte pattern {}",
+            from_utf8(byte_pattern).unwrap()
+        );
         root_node.contains(byte_pattern)
     }
 
@@ -172,5 +182,17 @@ mod tests {
     fn test_is_empty() {
         let dlb = DLB::new();
         assert_eq!(dlb.is_empty(), true);
+    }
+
+    #[test]
+    fn test_simple_contains() {
+        let string = "foo".to_owned();
+        let mut dlb = DLB::new();
+        let _id = dlb.get_or_intern(string.clone());
+        assert_eq!(dlb.is_empty(), false);
+        let found = dlb.contains(string.clone());
+        assert_eq!(found, true);
+        // let found_id = dlb.get(string.clone()).unwrap();
+        // assert_eq!(id, found_id);
     }
 }
