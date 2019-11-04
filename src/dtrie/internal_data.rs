@@ -2,6 +2,7 @@ use crate::dtrie::char_list::CharList;
 use crate::dtrie::dlb_node::DLBNode;
 use crate::dtrie::is_complete::IsComplete;
 use crate::dtrie::Identifier;
+use crate::dtrie::Matchable;
 use std::sync::atomic::AtomicU64;
 
 pub struct InternalData {
@@ -87,5 +88,11 @@ impl InternalData {
             return skippable + max;
         }
         similarity
+    }
+}
+
+impl Matchable for InternalData {
+    fn similar_bytes(&self, pattern: CharList) -> usize {
+        self.bytes().similar_bytes(pattern)
     }
 }

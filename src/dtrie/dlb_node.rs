@@ -2,6 +2,7 @@ use crate::dtrie::char_list::CharList;
 use crate::dtrie::internal_data::InternalData;
 use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::Identifier;
+use crate::dtrie::Matchable;
 use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -116,13 +117,6 @@ impl DLBNode {
         Identifier::from(0)
     }
 
-    pub fn similar_bytes(&self, pattern: CharList) -> usize {
-        match self {
-            DLBNode::Leaf(data) => data.similar_bytes(pattern),
-            DLBNode::Internal(data) => data.similar_bytes(pattern),
-        }
-    }
-
     pub fn get(&self, pattern: &[u8]) -> Option<Identifier> {
         println!("Checking node…");
         match self {
@@ -163,6 +157,15 @@ impl DLBNode {
         match self.get(pattern) {
             Some(_) => true,
             None => false,
+        }
+    }
+}
+
+impl Matchable for DLBNode {
+    fn similar_bytes(&self, pattern: CharList) -> usize {
+        match self {
+            DLBNode::Leaf(data) => data.similar_bytes(pattern),
+            DLBNode::Internal(data) => data.similar_bytes(pattern),
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::dtrie::char_list::CharList;
 use crate::dtrie::Identifier;
+use crate::dtrie::Matchable;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct LeafData {
@@ -25,8 +26,10 @@ impl LeafData {
     pub fn id(&self) -> Identifier {
         self.id
     }
+}
 
-    pub fn similar_bytes(&self, pattern: CharList) -> usize {
+impl Matchable for LeafData {
+    fn similar_bytes(&self, pattern: CharList) -> usize {
         self.bytes().similar_bytes(pattern)
     }
 }
