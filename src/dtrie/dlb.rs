@@ -147,11 +147,11 @@ mod tests {
     fn test_simple_contains() {
         let string = "foo".to_owned();
         let mut dlb = DLB::new();
-        let _id = dlb.get_or_intern(string.clone());
+        let id = dlb.get_or_intern(string.clone());
         assert_eq!(dlb.is_empty(), false);
         let found = dlb.contains(string.clone());
         assert_eq!(found, true);
-        // let found_id = dlb.get(string.clone()).unwrap();
-        // assert_eq!(id, found_id);
+        let found_id = dlb.get(string.clone()).unwrap();
+        assert_eq!(id, found_id);
     }
 }
