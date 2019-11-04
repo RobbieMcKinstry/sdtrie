@@ -2,6 +2,7 @@ use crate::char_list::CharList;
 use crate::dlb_node::DLBNode;
 use crate::is_complete::IsComplete;
 use crate::Identifier;
+use std::sync::atomic::AtomicU64;
 
 pub struct InternalData {
     bytes: CharList,
@@ -10,6 +11,18 @@ pub struct InternalData {
 }
 
 impl InternalData {
+    pub fn new(bytes: CharList, complete: IsComplete, children: Vec<DLBNode>) -> Self {
+        Self {
+            bytes,
+            children,
+            maybe_id: complete,
+        }
+    }
+
+    pub fn set_maybe_id(&mut self, id: IsComplete) {
+        self.maybe_id = id;
+    }
+
     pub fn bytes(&self) -> &CharList {
         &self.bytes
     }
@@ -20,6 +33,37 @@ impl InternalData {
 
     pub fn children(&self) -> &Vec<DLBNode> {
         &self.children
+    }
+
+    pub fn add_child(&mut self, node: DLBNode) {
+        self.children.push(node);
+    }
+
+    pub fn insert_at_index(
+        &mut self,
+        idx: usize,
+        pattern: CharList,
+        next_id: &mut AtomicU64,
+    ) -> Identifier {
+        self.children[idx].insert(pattern, next_id)
+    }
+
+    /// `find_best_child` checks all children for the
+    /// one which has the highest similarity to this pattern.
+    /// It returns the index of the child with the highest value, and that value.
+    pub fn find_best_child(&self, pattern: CharList) -> (Option<usize>, usize) {
+        let mut max = 0;
+        let mut best_index = None;
+        let mut index = 0;
+        for child in self.children().iter() {
+            let next_count = child.similar_bytes(pattern.clone());
+            if next_count > max {
+                best_index = Some(index);
+                max = next_count;
+            }
+            index += 1;
+        }
+        (best_index, max)
     }
 
     pub fn similar_bytes(&self, pattern: CharList) -> usize {

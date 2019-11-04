@@ -8,6 +8,11 @@ impl CharList {
         Self(other)
     }
 
+    pub fn empty() -> Self {
+        let empty_vec = Vec::new();
+        Self::new(empty_vec)
+    }
+
     pub fn similar_bytes(&self, pattern: CharList) -> usize {
         let mut count = 0;
         let i1 = self.0.iter();
@@ -32,6 +37,11 @@ impl CharList {
 
     pub fn iter(&self) -> std::slice::Iter<u8> {
         self.0.iter()
+    }
+
+    pub fn split_off(&mut self, at: usize) -> CharList {
+        let res = self.0.split_off(at);
+        CharList::from(res)
     }
 }
 
