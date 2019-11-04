@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub use identifier::Identifier;
 
 mod char_list;

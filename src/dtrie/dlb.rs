@@ -1,9 +1,7 @@
 use crate::dtrie::char_list::CharList;
 use crate::dtrie::dlb_node::DLBNode;
-use crate::dtrie::internal_data::InternalData;
 use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::Identifier;
-use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct DLB {
@@ -144,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_contains() {
+    fn test_simple_get() {
         let string = "foo".to_owned();
         let mut dlb = DLB::new();
         let id = dlb.get_or_intern(string.clone());
@@ -153,5 +151,53 @@ mod tests {
         assert_eq!(found, true);
         let found_id = dlb.get(string.clone()).unwrap();
         assert_eq!(id, found_id);
+    }
+
+    #[test]
+    fn test_two_leaves() {
+        let strings = vec![String::from("foo"), String::from("boo")];
+        let mut dlb = DLB::new();
+        strings
+            .clone()
+            .into_iter()
+            .map(|string| (dlb.get_or_intern(string.clone()), dlb.get(string)))
+            .for_each(|(orig, obs)| {
+                assert_eq!(Some(orig), obs);
+            });
+    }
+
+    #[test]
+    fn test_not_contained() {
+        let mut dlb = DLB::new();
+        vec!["foo", "boo", "food", "god", "goodbye"]
+            .into_iter()
+            .map(|x| String::from(x))
+            .for_each(|x| {
+                dlb.get_or_intern(x);
+            });
+        let not_contained = vec!["foog", "fb", "boob", "foodstuff", "fish", "goodnight"];
+        not_contained
+            .into_iter()
+            .map(|x| String::from(x))
+            .map(|x| dlb.contains(x))
+            .for_each(|x| assert_eq!(x, false));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_not_matching() {
+        /*
+        let mut dlb = DLB::new();
+        let ids = vec!["foo", "boo", "food", "god", "goodbye"]
+            .into_iter()
+            .map(|x| String::from(x))
+            .map(|x| dlb.get_or_intern(x));
+        let not_contained = vec!["foog", "fb", "boob", "foodstuff", "fish", "goodnight"];
+        not_contained
+            .into_iter()
+            .map(|x| String::from(x))
+            .map(|x| dlb.contains(x))
+            .for_each(|x| assert_eq!(x, false));
+            */
     }
 }
