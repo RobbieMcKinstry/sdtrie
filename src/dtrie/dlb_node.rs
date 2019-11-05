@@ -31,23 +31,6 @@ impl DLBNode {
         Self::Internal(internal_data)
     }
 
-    fn extra_leaf_bytes(
-        mut pattern: CharList,
-        pattern_id: Identifier,
-        leaf_id: Identifier,
-        similarity: usize,
-    ) -> DLBNode {
-        // Calculate what's left of the pattern.
-        let remaining = pattern.split_off(similarity);
-        // Make a leaf with the remaining bytes.
-        let leaf_data = LeafData::new(pattern_id, remaining);
-        let leaf = DLBNode::Leaf(leaf_data);
-        // Now build the internal node.
-        let child = vec![leaf];
-        let internal_data = InternalData::new(pattern, Some(leaf_id), child);
-        DLBNode::Internal(internal_data)
-    }
-
     pub fn insert(&mut self, mut pattern: CharList, next_id: &mut AtomicU64) -> Identifier {
         match self {
             DLBNode::Leaf(data) => {
@@ -72,13 +55,6 @@ impl DLBNode {
                 // Action:
                 //    Create an internal node. IsComplete is true since this was a leaf.
                 //    Have it's children be a leaf with the remaining bytes from the pattern.
-                if consumes_entire_leaf && !consumes_entire_pattern {
-                    // get a new ID for the forcoming leaf node.
-                    let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                    *self = Self::extra_leaf_bytes(pattern, id, data.id(), similarity);
-                    return id;
-                }
-
                 // Case 4: the pattern is entirely consumed, but there are still
                 // bytes left on the leaf.
                 // i.e. Patterns match fully, but pattern.len() < self.data.len()
@@ -87,23 +63,14 @@ impl DLBNode {
                 //     IsComplete is true, since this represents the truncation of this
                 //     leaf at the end of the pattern.
                 //     The child of this internal node is what remains of this node's bytes.
-                if !consumes_entire_leaf && consumes_entire_pattern {
+                if consumes_entire_leaf || consumes_entire_pattern {
                     // get a new ID for the forcoming leaf node.
                     let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                    // Calculate what's left of the pattern.
-                    let remaining_bytes: Vec<u8> =
-                        data.bytes().clone().into_iter().skip(similarity).collect();
-                    let remaining = CharList::from(remaining_bytes);
-                    // Make a leaf with the remaining bytes.
-                    let leaf_data = LeafData::new(data.id(), remaining);
-                    let leaf = DLBNode::Leaf(leaf_data);
-                    // Now build the internal node.
-                    let child = vec![leaf];
-                    let internal_data = InternalData::new(pattern, Some(id), child);
-                    *self = DLBNode::Internal(internal_data);
+                    let left = (id, pattern);
+                    let right = (data.id(), data.bytes().clone());
+                    *self = Self::build_full_match(left, right);
                     return id;
                 }
-
                 // Case 5: Two roads diverge in a Yellow Wood
                 // The match is complete for neither. Here, we create an internal node with
                 // two children: 1 for the leaf's remaining bytes and one for the pattern's
