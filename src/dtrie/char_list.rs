@@ -43,6 +43,16 @@ impl CharList {
         let res = self.0.split_off(at);
         CharList::from(res)
     }
+
+    pub fn append(&self, mut other: CharList) -> CharList {
+        let mut res = self.0.clone();
+        res.append(&mut other.0);
+        Self(res)
+    }
+
+    pub fn to_string(&self) -> String {
+        String::from_utf8(self.0.clone()).unwrap()
+    }
 }
 
 impl IntoIterator for CharList {
@@ -61,6 +71,12 @@ impl fmt::Display for CharList {
             res = format!("{}{}", res, character);
         }
         write!(f, "{}", res)
+    }
+}
+
+impl fmt::Debug for CharList {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", String::from_utf8(self.0.clone()).unwrap())
     }
 }
 

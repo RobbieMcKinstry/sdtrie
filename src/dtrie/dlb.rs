@@ -67,6 +67,7 @@ impl DLB {
     }
 
     pub fn get_or_intern(&mut self, s: String) -> Identifier {
+        println!("Interning {}", s.clone());
         // Check if root is empty:
         let bytes = CharList::from(s.clone().into_bytes());
         // Special case where the input string is empty.
@@ -84,6 +85,7 @@ impl DLB {
         // also know the root isn't a leaf.
         self.intern(bytes)
     }
+
     pub fn intern_empty_string(&mut self) -> Identifier {
         match self.contains_empty {
             Some(id) => id,
@@ -127,8 +129,8 @@ impl DLB {
         return id;
     }
 
-    pub fn intern(&mut self, mut bytes: CharList) -> Identifier {
-        let (matching_index, match_length) = self.find_best_match(bytes.clone());
+    pub fn intern(&mut self, bytes: CharList) -> Identifier {
+        let (matching_index, _) = self.find_best_match(bytes.clone());
 
         // If we found nothing, make a new leaf.
         if let None = matching_index {
@@ -136,8 +138,30 @@ impl DLB {
         }
         // Else, add this pattern to the longest one we have.
         let idx = matching_index.unwrap();
-        let remaining = bytes.split_off(match_length);
-        return self.root[idx].insert(remaining, &mut self.next_id);
+        return self.root[idx].insert(bytes, &mut self.next_id);
+    }
+
+    pub fn resolve(&self, id: Identifier) -> Option<String> {
+        if self.is_empty() {
+            return None;
+        }
+
+        if let Some(empty) = self.contains_empty {
+            if empty == id {
+                return Some("".to_owned());
+            }
+        }
+
+        let res = self
+            .root
+            .iter()
+            .map(|child| child.resolve(id, CharList::empty()))
+            .filter(|x| x.is_some())
+            .next();
+        match res {
+            None => None,
+            Some(x) => Some(x.unwrap()),
+        }
     }
 }
 
@@ -180,7 +204,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_not_contained() {
         println!("Running not contained test");
         let mut dlb = DLB::new();

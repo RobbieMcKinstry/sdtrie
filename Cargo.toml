@@ -13,3 +13,4 @@ keywords = ["trie", "strings", "interning", "string-interning", "succinct", "fst
 license = "MIT"
 
 [dependencies]
+im = "13.0.0"

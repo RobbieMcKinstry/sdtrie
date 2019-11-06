@@ -3,16 +3,18 @@ use crate::dtrie::dlb_node::DLBNode;
 use crate::dtrie::is_complete::IsComplete;
 use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
+use im::Vector;
 use std::sync::atomic::AtomicU64;
 
+#[derive(Clone)]
 pub struct InternalData {
     bytes: CharList,
     maybe_id: IsComplete,
-    children: Vec<DLBNode>,
+    children: Vector<DLBNode>,
 }
 
 impl InternalData {
-    pub fn new(bytes: CharList, complete: IsComplete, children: Vec<DLBNode>) -> Self {
+    pub fn new(bytes: CharList, complete: IsComplete, children: Vector<DLBNode>) -> Self {
         Self {
             bytes,
             children,
@@ -32,12 +34,12 @@ impl InternalData {
         self.maybe_id
     }
 
-    pub fn children(&self) -> &Vec<DLBNode> {
+    pub fn children(&self) -> &Vector<DLBNode> {
         &self.children
     }
 
     pub fn add_child(&mut self, node: DLBNode) {
-        self.children.push(node);
+        self.children.push_back(node);
     }
 
     pub fn insert_at_index(
@@ -67,6 +69,10 @@ impl InternalData {
         (best_index, max)
     }
 
+    pub fn clone_children(&self) -> Vector<DLBNode> {
+        self.children.clone()
+    }
+
     pub fn similar_bytes(&self, pattern: CharList) -> usize {
         // First, iterate over a char list and grab any similar bytes.
         let similarity = self.bytes().similar_bytes(pattern.clone());
@@ -77,7 +83,7 @@ impl InternalData {
             let remaining_bytes: Vec<u8> = pattern.iter().skip(skippable).map(|b| *b).collect();
             let remaining = CharList::from(remaining_bytes);
             let mut max = 0;
-            for child in self.children() {
+            for child in self.children().iter() {
                 // WARNING: I can get rid of this clone by changing the similar_bytes() fn
                 // to take a reference instead.
                 let next_count = child.similar_bytes(remaining.clone());

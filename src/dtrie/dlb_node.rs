@@ -3,9 +3,11 @@ use crate::dtrie::internal_data::InternalData;
 use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
+use im::vector;
 use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[derive(Clone)]
 pub enum DLBNode {
     Leaf(LeafData),
     Internal(InternalData),
@@ -26,7 +28,7 @@ impl DLBNode {
         let leaf_data = LeafData::new(largest.0, remaining);
         let leaf = DLBNode::Leaf(leaf_data);
         // Now build the internal node.
-        let child = vec![leaf];
+        let child = vector![leaf];
         let internal_data = InternalData::new(smallest.1, Some(smallest.0), child);
         Self::Internal(internal_data)
     }
@@ -40,29 +42,23 @@ impl DLBNode {
                 let consumes_entire_pattern = similarity == pattern.len();
                 let consumes_entire_leaf = similarity == data.bytes().len();
                 let no_match = similarity == 0;
-                // Case 1: Exact match
+                // Case 1: No match.
+                if no_match {
+                    println!("My data: {:?}", data.bytes());
+                    println!("My pattern: {:?}", pattern);
+                    unreachable!("Similarity required to have gotten his far");
+                }
+                // Case 2: Exact match
                 // If no bytes remain, return my integer.
                 if consumes_entire_pattern && consumes_entire_leaf {
                     return data.id();
                 }
-                // Case 2: No match.
-                if no_match {
-                    unreachable!("Similarity required to have gotten his far");
-                }
-                // Case 3: the leaf is entirely consumed
-                // but there are still bytes left in the pattern.
-                //  i.e. Patterns matches fully, but pattern.len() > self.data.len()
+                // Case 3: Exactly one of the leaf or the pattern is entirely consumed
+                // i.e. pattern.len() > self.data.len() OR pattern.len() < self.data.len()
                 // Action:
-                //    Create an internal node. IsComplete is true since this was a leaf.
-                //    Have it's children be a leaf with the remaining bytes from the pattern.
-                // Case 4: the pattern is entirely consumed, but there are still
-                // bytes left on the leaf.
-                // i.e. Patterns match fully, but pattern.len() < self.data.len()
-                // Action:
-                //     Create an internal node with the match part of the pattern.
-                //     IsComplete is true, since this represents the truncation of this
-                //     leaf at the end of the pattern.
-                //     The child of this internal node is what remains of this node's bytes.
+                //    Create an internal node. IsComplete is true since it matches either
+                //    the leaf entirely or the pattern entirely.
+                //    Have it's children be a leaf with the remaining bytes from the match.
                 if consumes_entire_leaf || consumes_entire_pattern {
                     // get a new ID for the forcoming leaf node.
                     let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
@@ -82,7 +78,7 @@ impl DLBNode {
                 let leaf_leftover = data.bytes().clone().split_off(similarity);
                 let pattern_leaf = DLBNode::Leaf(LeafData::new(id, pattern_leftover));
                 let existing_leaf = DLBNode::Leaf(LeafData::new(data.id(), leaf_leftover));
-                let children = vec![pattern_leaf, existing_leaf];
+                let children = vector![pattern_leaf, existing_leaf];
                 let internal_data = InternalData::new(pattern_copy, None, children);
                 let internal_node = DLBNode::Internal(internal_data);
                 *self = internal_node;
@@ -92,10 +88,19 @@ impl DLBNode {
                 // Consume any of the characters in pattern which match on
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
-                // Case 1: Exact match
+                let consumes_entire_pattern = similarity == pattern.len();
+                let consumes_entire_bytestring = similarity == data.bytes().len();
+                let no_match = similarity == 0;
+                // Case 1: No match.
+                if no_match {
+                    println!("My data: {}", data.bytes());
+                    println!("My pattern: {}", pattern);
+                    unreachable!("Similarity required to have gotten his far");
+                }
+                // Case 2: Exact match
                 // In this case, we just need to check the IsComplete field
                 // and perhaps update it.
-                if similarity == pattern.len() && similarity == data.bytes().len() {
+                if consumes_entire_pattern && consumes_entire_bytestring {
                     if let Some(id) = data.maybe_id() {
                         return id;
                     } else {
@@ -104,14 +109,32 @@ impl DLBNode {
                         return id;
                     }
                 }
-                // Case 2: No match.
-                if similarity == 0 {
-                    unreachable!("Similarity required to have gotten his far");
+                // Case 3: Similarity < pattern.len
+                // In this case, we need to make a new internal node for the overlap.
+                if similarity < pattern.len() {
+                    let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                    let pattern_leftovers = pattern.clone().split_off(similarity);
+                    let bytestring_leftover = pattern.clone().split_off(similarity);
+                    let leaf = DLBNode::Leaf(LeafData::new(id, pattern_leftovers));
+                    let second_level = InternalData::new(
+                        bytestring_leftover,
+                        data.maybe_id(),
+                        data.clone_children(),
+                    );
+                    let children = vector![leaf, DLBNode::Internal(second_level)];
+                    let internal_data = InternalData::new(pattern, None, children);
+                    *self = DLBNode::Internal(internal_data);
+                    return id;
                 }
-                // Case 3: Partial match, where pattern.len() > data.bytes().len()
+
+                // Now, similarity must be == to pattern.len
+
+                // Case 4:
+                // data.bytes < similarity
+                // In this case, we have matched this entire node. Time to recurse!
                 //     In this case, we need to pass the remaining bytes along to our children.
                 //     If our children have no overlap, then we make a new leaf.
-                if similarity == data.bytes().len() && data.bytes().len() < pattern.len() {
+                if data.bytes().len() < similarity {
                     // Chop off the matching part.
                     let remaining = pattern.split_off(similarity);
                     let (best_index, _count) = data.find_best_child(remaining.clone());
@@ -129,15 +152,21 @@ impl DLBNode {
                         }
                     }
                 }
-
-                // Case 4: Partial match, where similarity < data.bytes().
-                //     In this case, we need to make a new internal node for the
-                //     matching patern, and that internal node will point to this node,
-                //     with the matching part removed.`
+                // Case 4:
+                // similarity < data.bytes (and similarity == pattern.len)
+                // Action:
+                //    Make a new internal node for the overlap.
+                //    It should be IsComplete=true, and its children should be this node.
+                let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                let remaining = data.bytes().clone().split_off(similarity);
+                let second_level =
+                    InternalData::new(remaining, data.maybe_id(), data.clone_children());
+                let children = vector![DLBNode::Internal(second_level)];
+                let internal_data = InternalData::new(pattern, Some(id), children);
+                *self = DLBNode::Internal(internal_data);
+                return id;
             }
         }
-
-        Identifier::from(0)
     }
 
     pub fn get(&self, pattern: &[u8]) -> Option<Identifier> {
@@ -180,6 +209,38 @@ impl DLBNode {
         match self.get(pattern) {
             Some(_) => true,
             None => false,
+        }
+    }
+
+    pub fn resolve(&self, id: Identifier, thus_far: CharList) -> Option<String> {
+        match self {
+            DLBNode::Leaf(data) => {
+                if data.id() == id {
+                    let result = thus_far.append(data.bytes().clone());
+                    return Some(result.to_string());
+                }
+                return None;
+            }
+            DLBNode::Internal(data) => {
+                if let Some(internal_id) = data.maybe_id() {
+                    if internal_id == id {
+                        let result = thus_far.append(data.bytes().clone());
+                        return Some(result.to_string());
+                    }
+                }
+
+                let next_string = thus_far.append(data.bytes().clone());
+                let res = data
+                    .children()
+                    .iter()
+                    .map(|child| child.resolve(id, next_string.clone()))
+                    .filter(|x| x.is_some())
+                    .next();
+                match res {
+                    None => None,
+                    Some(x) => Some(x.unwrap()),
+                }
+            }
         }
     }
 }

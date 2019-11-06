@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+pub use dlb::DLB;
 pub use identifier::Identifier;
 pub use matchable::Matchable;
 

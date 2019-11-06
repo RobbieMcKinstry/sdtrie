@@ -3,6 +3,7 @@ use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[derive(Clone)]
 pub struct LeafData {
     bytes: CharList,
     id: Identifier,
