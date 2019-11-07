@@ -110,145 +110,93 @@ impl DLBNode {
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
                 let consumes_pattern_exactly = similarity == pattern.len();
-                let pattern_has_leftovers = !consumes_pattern_exactly;
                 let consumes_bytestring_exactly = similarity == data.bytes().len();
-                let bytestring_has_leftovers = similarity < data.bytes().len();
                 let no_match = similarity == 0;
 
-                match (no_match, consumes_pattern_exactly, consumes_bytestring_exactly) {
-                    (true, true, true) => unimplemented!();
-                    (true, true, false) => unimplemented!();
-                    (true, false, true) => unimplemented!();
-                    (true, false, false) => unimplemented!();
-                    (false, true, true) => unimplemented!();
-                    (false, true, false) => unimplemented!();
-                    (false, false, true) => unimplemented!();
-                    (false, false, false) => unimplemented!();
-                }
-
-                // Case 1: No match.
-                if no_match {
-                    println!("My data: {}", data.bytes());
-                    println!("My pattern: {}", pattern);
-                    unreachable!("Similarity required to have gotten his far");
-                }
-                // Case 2: Exact match
-                // In this case, we just need to check the IsComplete field
-                // and perhaps update it.
-                if consumes_pattern_exactly && consumes_bytestring_exactly {
-                    if let Some(id) = data.maybe_id() {
-                        return id;
-                    } else {
-                        let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                        data.set_maybe_id(Some(id));
-                        return id;
-                    }
-                }
-                // Case 3: Similarity < pattern.len() && similarity < bytestring.len()
-                // Make a new internal node for the overlapping pattern
-                // Take the leftover bytes from the bytestring, and make an internal
-                // node for that. That second internal node gets the childrens of this node
-                // Make a new leaf for the leftover bytes from pattern
-                if pattern_has_leftovers && bytestring_has_leftovers {
-                    unimplemented!();
-                }
-                // Case 4: Similarity < bytestring.len() && similarity == pattern.len()
-                // Make a new internal node for the overlapping pattern. This internal
-                // node has `IsComplete` set to true.
-                // Take the leftover bytes from the bytestring and make an internal
-                // node for that. That second internal node gets the children of this node.
-                if consumes_pattern_exactly && bytestring_has_leftovers {
-                    unimplemented!();
-                }
-                //
-                // Case 5: Similarity == bytestring.len && similarity < pattern.len()
-                // Strip pattern of the similar bytes and recurse.
-                if pattern_has_leftovers && consumes_bytestring_exactly {
-                    unimplemented!();
-                }
-                ////////////////////////////////////////////////////
-                // Case 3: Similary Similarity < pattern.len
-                // Case 4: Similarity == pattern.len
-                // Case 3: Similarity < pattern.len and the matching ends at this node.
-                // In this case, we simply add a new leaf node for the rest of the pattern.
-                unimplemented!();
-                if similarity < pattern.len() && consumes_node_exactly {
-                    println!(
-                        "Similary < pattern.len for interning pattern {}",
-                        pattern.clone().to_string()
-                    );
-                    let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                    let leftover = pattern.split_off(similarity);
-                    let leaf = DLBNode::Leaf(LeafData::new(id, leftover));
-                    data.add_child(leaf);
-                    return id;
-                }
-
-                // Case 4: Similarity < pattern.len and matching extends beyond this node.
-                if similarity < pattern.len() && !consumes_entire_bytestring {
-                    let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                    let mut new_internal_pattern = pattern.clone();
-                    new_internal_pattern.split_off(similarity);
-                    let pattern_leftovers = pattern.clone().split_off(similarity);
-                    let bytestring_leftover = pattern.clone().split_off(similarity);
-                    println!(
-                        "Pattern leftovers={}",
-                        pattern_leftovers.clone().to_string()
-                    );
-                    println!(
-                        "bytestring leftovers={}",
-                        bytestring_leftover.clone().to_string()
-                    );
-
-                    let leaf = DLBNode::Leaf(LeafData::new(id, pattern_leftovers));
-                    let second_level = InternalData::new(
-                        bytestring_leftover,
-                        data.maybe_id(),
-                        data.clone_children(),
-                    );
-                    let children = vector![leaf, DLBNode::Internal(second_level)];
-                    let internal_data = InternalData::new(new_internal_pattern, None, children);
-                    *self = DLBNode::Internal(internal_data);
-                    return id;
-                }
-
-                // Now, similarity must be == to pattern.len
-                // Case 4:
-                // data.bytes < similarity
-                // In this case, we have matched this entire node. Time to recurse!
-                //     In this case, we need to pass the remaining bytes along to our children.
-                //     If our children have no overlap, then we make a new leaf.
-                if data.bytes().len() < similarity {
-                    // Chop off the matching part.
-                    let remaining = pattern.split_off(similarity);
-                    let (best_index, _count) = data.find_best_child(remaining.clone());
-                    match best_index {
-                        Some(idx) => {
-                            return data.insert_at_index(idx, remaining, next_id);
-                        }
-                        None => {
-                            // Make a new leaf and add it as a child.
+                match (
+                    no_match,
+                    consumes_pattern_exactly,
+                    consumes_bytestring_exactly,
+                ) {
+                    // Case 1: Exact match.
+                    // In this case, we just need to check the IsComplete field
+                    // and perhaps update it.
+                    (false, true, true) => {
+                        if let Some(id) = data.maybe_id() {
+                            return id;
+                        } else {
                             let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                            let new_leaf_data = LeafData::new(id, remaining);
-                            let new_leaf = DLBNode::Leaf(new_leaf_data);
-                            data.add_child(new_leaf);
+                            data.set_maybe_id(Some(id));
                             return id;
                         }
                     }
+                    // Case 2: Similarity == pattern.len() && Similarity < bytestring.len()
+                    // Make a new internal node for the overlapping pattern. This internal
+                    // node has `IsComplete` set to true.
+                    // Take the leftover bytes from the bytestring and make an internal
+                    // node for that. That second internal node gets the children of this node.
+                    (false, true, false) => {
+                        let mut internal = data.bytes().clone();
+                        let internal_leftovers = internal.split_off(similarity);
+
+                        let second_layer_data = InternalData::new(
+                            internal_leftovers,
+                            data.maybe_id(),
+                            data.children().clone(),
+                        );
+                        let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                        let second_layer = DLBNode::Internal(second_layer_data);
+                        let children = vector![second_layer];
+                        let internal_data = InternalData::new(pattern, Some(id), children);
+                        *self = DLBNode::Internal(internal_data);
+                        return id;
+                    }
+                    // Case 3: Similarity < pattern.len() && similarity == bytestring.len
+                    // Strip pattern of the similar bytes and recurse.
+                    (false, false, true) => {
+                        let remaining = pattern.split_off(similarity);
+                        let (best_index, _count) = data.find_best_child(remaining.clone());
+                        match best_index {
+                            Some(idx) => {
+                                return data.insert_at_index(idx, remaining, next_id);
+                            }
+                            None => {
+                                // Make a new leaf and add it as a child.
+                                let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                                let new_leaf_data = LeafData::new(id, remaining);
+                                let new_leaf = DLBNode::Leaf(new_leaf_data);
+                                data.add_child(new_leaf);
+                                return id;
+                            }
+                        }
+                    }
+                    // Case 4: Similarity < pattern.len() && similarity < bytestring.len()
+                    // Make a new internal node for the overlapping pattern
+                    // Take the leftover bytes from the bytestring, and make an internal
+                    // node for that. That second internal node gets the childrens of this node
+                    // Make a new leaf for the leftover bytes from pattern
+                    (false, false, false) => {
+                        let mut internal = data.bytes().clone();
+                        let pattern_leftovers = pattern.split_off(similarity);
+                        let internal_leftovers = internal.split_off(similarity);
+
+                        let second_layer_data = InternalData::new(
+                            internal_leftovers,
+                            data.maybe_id(),
+                            data.children().clone(),
+                        );
+                        let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                        let second_layer = DLBNode::Internal(second_layer_data);
+                        let new_leaf_data = LeafData::new(id, pattern_leftovers);
+                        let new_leaf = DLBNode::Leaf(new_leaf_data);
+                        let children = vector![second_layer, new_leaf];
+                        let internal_data = InternalData::new(pattern, None, children);
+                        *self = DLBNode::Internal(internal_data);
+                        return id;
+                    }
+                    // Case 5: No match.
+                    (true, _, _) => unreachable!(), // Cannot reach this node without a match
                 }
-                // Case 4:
-                // similarity < data.bytes (and similarity == pattern.len)
-                // Action:
-                //    Make a new internal node for the overlap.
-                //    It should be IsComplete=true, and its children should be this node.
-                let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                let remaining = data.bytes().clone().split_off(similarity);
-                let second_level =
-                    InternalData::new(remaining, data.maybe_id(), data.clone_children());
-                let children = vector![DLBNode::Internal(second_level)];
-                let internal_data = InternalData::new(pattern, Some(id), children);
-                *self = DLBNode::Internal(internal_data);
-                return id;
             }
         }
     }
