@@ -109,10 +109,23 @@ impl DLBNode {
                 // Consume any of the characters in pattern which match on
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
-                let consumes_entire_pattern = similarity == pattern.len();
-                let consumes_entire_bytestring = similarity >= data.bytes().len();
-                let consumes_node_exactly = similarity == data.bytes().len();
+                let consumes_pattern_exactly = similarity == pattern.len();
+                let pattern_has_leftovers = !consumes_pattern_exactly;
+                let consumes_bytestring_exactly = similarity == data.bytes().len();
+                let bytestring_has_leftovers = similarity < data.bytes().len();
                 let no_match = similarity == 0;
+
+                match (no_match, consumes_pattern_exactly, consumes_bytestring_exactly) {
+                    (true, true, true) => unimplemented!();
+                    (true, true, false) => unimplemented!();
+                    (true, false, true) => unimplemented!();
+                    (true, false, false) => unimplemented!();
+                    (false, true, true) => unimplemented!();
+                    (false, true, false) => unimplemented!();
+                    (false, false, true) => unimplemented!();
+                    (false, false, false) => unimplemented!();
+                }
+
                 // Case 1: No match.
                 if no_match {
                     println!("My data: {}", data.bytes());
@@ -122,7 +135,7 @@ impl DLBNode {
                 // Case 2: Exact match
                 // In this case, we just need to check the IsComplete field
                 // and perhaps update it.
-                if consumes_entire_pattern && consumes_node_exactly {
+                if consumes_pattern_exactly && consumes_bytestring_exactly {
                     if let Some(id) = data.maybe_id() {
                         return id;
                     } else {
@@ -131,8 +144,34 @@ impl DLBNode {
                         return id;
                     }
                 }
+                // Case 3: Similarity < pattern.len() && similarity < bytestring.len()
+                // Make a new internal node for the overlapping pattern
+                // Take the leftover bytes from the bytestring, and make an internal
+                // node for that. That second internal node gets the childrens of this node
+                // Make a new leaf for the leftover bytes from pattern
+                if pattern_has_leftovers && bytestring_has_leftovers {
+                    unimplemented!();
+                }
+                // Case 4: Similarity < bytestring.len() && similarity == pattern.len()
+                // Make a new internal node for the overlapping pattern. This internal
+                // node has `IsComplete` set to true.
+                // Take the leftover bytes from the bytestring and make an internal
+                // node for that. That second internal node gets the children of this node.
+                if consumes_pattern_exactly && bytestring_has_leftovers {
+                    unimplemented!();
+                }
+                //
+                // Case 5: Similarity == bytestring.len && similarity < pattern.len()
+                // Strip pattern of the similar bytes and recurse.
+                if pattern_has_leftovers && consumes_bytestring_exactly {
+                    unimplemented!();
+                }
+                ////////////////////////////////////////////////////
+                // Case 3: Similary Similarity < pattern.len
+                // Case 4: Similarity == pattern.len
                 // Case 3: Similarity < pattern.len and the matching ends at this node.
                 // In this case, we simply add a new leaf node for the rest of the pattern.
+                unimplemented!();
                 if similarity < pattern.len() && consumes_node_exactly {
                     println!(
                         "Similary < pattern.len for interning pattern {}",

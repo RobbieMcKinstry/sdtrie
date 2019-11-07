@@ -1,3 +1,4 @@
+use crate::dtrie::Matchable;
 use std::fmt;
 
 #[derive(Clone)]
@@ -11,20 +12,6 @@ impl CharList {
     pub fn empty() -> Self {
         let empty_vec = Vec::new();
         Self::new(empty_vec)
-    }
-
-    pub fn similar_bytes(&self, pattern: CharList) -> usize {
-        let mut count = 0;
-        let i1 = self.0.iter();
-        let i2 = pattern.iter();
-        for (left, right) in i1.zip(i2) {
-            if *left == *right {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-        count
     }
 
     pub fn len(&self) -> usize {
@@ -52,6 +39,22 @@ impl CharList {
 
     pub fn to_string(&self) -> String {
         String::from_utf8(self.0.clone()).unwrap()
+    }
+}
+
+impl Matchable for CharList {
+    fn similar_bytes(&self, pattern: CharList) -> usize {
+        let mut count = 0;
+        let i1 = self.0.iter();
+        let i2 = pattern.iter();
+        for (left, right) in i1.zip(i2) {
+            if *left == *right {
+                count += 1;
+            } else {
+                break;
+            }
+        }
+        count
     }
 }
 

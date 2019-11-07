@@ -73,7 +73,7 @@ impl InternalData {
         self.children.clone()
     }
 
-    pub fn similar_bytes(&self, pattern: CharList) -> usize {
+    pub fn total_matching_bytes(&self, pattern: CharList) -> usize {
         // First, iterate over a char list and grab any similar bytes.
         let similarity = self.bytes().similar_bytes(pattern.clone());
         if similarity == self.bytes().len() {
