@@ -16,6 +16,27 @@ pub enum DLBNode {
 type NodeDescription = (Identifier, CharList);
 
 impl DLBNode {
+    pub fn count_nodes(&self) -> u64 {
+        match self {
+            DLBNode::Leaf(data) => {
+                println!("…counting leaf pattern={}.", data.bytes().to_string());
+                return 1;
+            }
+            DLBNode::Internal(data) => {
+                println!(
+                    "…counting intern pattern={} with {} kids.",
+                    data.bytes().to_string(),
+                    data.children().len()
+                );
+                1 + data
+                    .children()
+                    .iter()
+                    .map(|node| node.count_nodes())
+                    .fold(0, |acc, inc| acc + inc)
+            }
+        }
+    }
+
     fn build_full_match(left: NodeDescription, right: NodeDescription) -> Self {
         // Order them according to length
         let (smallest, mut largest) = if left.1.len() < right.1.len() {
@@ -89,7 +110,8 @@ impl DLBNode {
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
                 let consumes_entire_pattern = similarity == pattern.len();
-                let consumes_entire_bytestring = similarity == data.bytes().len();
+                let consumes_entire_bytestring = similarity >= data.bytes().len();
+                let consumes_node_exactly = similarity == data.bytes().len();
                 let no_match = similarity == 0;
                 // Case 1: No match.
                 if no_match {
@@ -100,7 +122,7 @@ impl DLBNode {
                 // Case 2: Exact match
                 // In this case, we just need to check the IsComplete field
                 // and perhaps update it.
-                if consumes_entire_pattern && consumes_entire_bytestring {
+                if consumes_entire_pattern && consumes_node_exactly {
                     if let Some(id) = data.maybe_id() {
                         return id;
                     } else {
@@ -109,12 +131,36 @@ impl DLBNode {
                         return id;
                     }
                 }
-                // Case 3: Similarity < pattern.len
-                // In this case, we need to make a new internal node for the overlap.
-                if similarity < pattern.len() {
+                // Case 3: Similarity < pattern.len and the matching ends at this node.
+                // In this case, we simply add a new leaf node for the rest of the pattern.
+                if similarity < pattern.len() && consumes_node_exactly {
+                    println!(
+                        "Similary < pattern.len for interning pattern {}",
+                        pattern.clone().to_string()
+                    );
                     let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                    let leftover = pattern.split_off(similarity);
+                    let leaf = DLBNode::Leaf(LeafData::new(id, leftover));
+                    data.add_child(leaf);
+                    return id;
+                }
+
+                // Case 4: Similarity < pattern.len and matching extends beyond this node.
+                if similarity < pattern.len() && !consumes_entire_bytestring {
+                    let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
+                    let mut new_internal_pattern = pattern.clone();
+                    new_internal_pattern.split_off(similarity);
                     let pattern_leftovers = pattern.clone().split_off(similarity);
                     let bytestring_leftover = pattern.clone().split_off(similarity);
+                    println!(
+                        "Pattern leftovers={}",
+                        pattern_leftovers.clone().to_string()
+                    );
+                    println!(
+                        "bytestring leftovers={}",
+                        bytestring_leftover.clone().to_string()
+                    );
+
                     let leaf = DLBNode::Leaf(LeafData::new(id, pattern_leftovers));
                     let second_level = InternalData::new(
                         bytestring_leftover,
@@ -122,13 +168,12 @@ impl DLBNode {
                         data.clone_children(),
                     );
                     let children = vector![leaf, DLBNode::Internal(second_level)];
-                    let internal_data = InternalData::new(pattern, None, children);
+                    let internal_data = InternalData::new(new_internal_pattern, None, children);
                     *self = DLBNode::Internal(internal_data);
                     return id;
                 }
 
                 // Now, similarity must be == to pattern.len
-
                 // Case 4:
                 // data.bytes < similarity
                 // In this case, we have matched this entire node. Time to recurse!

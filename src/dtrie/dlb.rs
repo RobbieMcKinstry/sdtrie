@@ -66,6 +66,17 @@ impl DLB {
         None
     }
 
+    pub fn count_nodes(&self) -> u64 {
+        if self.is_empty() {
+            return 0;
+        }
+
+        self.root
+            .iter()
+            .map(|node| node.count_nodes())
+            .fold(0, |acc, inc| acc + inc)
+    }
+
     pub fn get_or_intern(&mut self, s: String) -> Identifier {
         println!("Interning {}", s.clone());
         // Check if root is empty:
