@@ -46,7 +46,6 @@ fn test_count_nodes3() {
 }
 
 #[test]
-#[ignore]
 fn test_count_nodes4() {
     let mut dlb = DLB::new();
 
@@ -61,7 +60,6 @@ fn test_count_nodes4() {
 }
 
 #[test]
-#[ignore]
 fn test_broken_case1() {
     let mut dlb = DLB::new();
     let expected1 = String::from("1080");
@@ -87,14 +85,13 @@ fn test_broken_case1() {
 }
 
 #[test]
-#[ignore]
 fn test_reads_dictionary() {
     let mut dlb = DLB::new();
     let f = File::open("tests/words.txt").unwrap();
     let file = BufReader::new(&f);
     let mut words = Vec::with_capacity(466551);
     println!("Reading file.");
-    for line in file.lines().take(5) {
+    for line in file.lines().take(22000) {
         let content = line.unwrap().trim().to_owned();
         words.push(content);
     }
