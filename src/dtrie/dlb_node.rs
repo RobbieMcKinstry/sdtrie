@@ -4,6 +4,7 @@ use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
 use im::vector;
+use std::mem::size_of;
 use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -241,6 +242,20 @@ impl DLBNode {
         match self.get(pattern) {
             Some(_) => true,
             None => false,
+        }
+    }
+
+    pub fn size_of(&self) -> usize {
+        match self {
+            DLBNode::Leaf(_) => size_of::<Self>(),
+            DLBNode::Internal(data) => {
+                size_of::<Self>()
+                    + data
+                        .children()
+                        .iter()
+                        .map(|child| child.size_of())
+                        .fold(0, |x, acc| x + acc)
+            }
         }
     }
 

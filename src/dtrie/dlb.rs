@@ -3,6 +3,7 @@ use crate::dtrie::dlb_node::DLBNode;
 use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::matchable::Matchable;
 use crate::dtrie::Identifier;
+use std::mem::size_of;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct DLB {
@@ -66,6 +67,16 @@ impl DLB {
         None
     }
 
+    pub fn size_of(&self) -> usize {
+        let self_size = size_of::<Self>();
+        let child_size = self
+            .root
+            .iter()
+            .map(|child| child.size_of())
+            .fold(0, |x, acc| x + acc);
+        self_size + child_size
+    }
+
     pub fn count_nodes(&self) -> u64 {
         if self.is_empty() {
             return 0;
@@ -78,7 +89,6 @@ impl DLB {
     }
 
     pub fn get_or_intern(&mut self, s: String) -> Identifier {
-        println!("Interning {}", s.clone());
         // Check if root is empty:
         let bytes = CharList::from(s.clone().into_bytes());
         // Special case where the input string is empty.
