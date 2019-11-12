@@ -215,7 +215,7 @@ impl DLBNode {
             DLBNode::Leaf(data) => {
                 println!("I am a leaf.");
                 // Check if the list matches the rest of the elements:
-                if data.bytes().as_slice() == pattern {
+                if data.bytes().as_vec() == pattern {
                     return Some(data.id());
                 }
             }

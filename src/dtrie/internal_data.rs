@@ -80,7 +80,7 @@ impl InternalData {
             // Then, it has matches this entire node.
             // Chop off those bytes and keep going.
             let skippable = self.bytes().len();
-            let remaining_bytes: Vec<u8> = pattern.iter().skip(skippable).map(|b| *b).collect();
+            let remaining_bytes: Vec<u8> = pattern.iter().skip(skippable).collect();
             let remaining = CharList::from(remaining_bytes);
             let mut max = 0;
             for child in self.children().iter() {
