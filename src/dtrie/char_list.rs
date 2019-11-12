@@ -40,6 +40,17 @@ impl CharList {
     pub fn to_string(&self) -> String {
         String::from_utf8(self.0.clone()).unwrap()
     }
+
+    pub fn count_shared_prefix(&self, bytes: &[u8]) -> usize {
+        let mut count = 0;
+        for (x, y) in bytes.iter().zip(self.iter()) {
+            if x != y {
+                break;
+            }
+            count += 1
+        }
+        return count;
+    }
 }
 
 impl Matchable for CharList {

@@ -38,6 +38,13 @@ impl DLBNode {
         }
     }
 
+    pub fn bytes(&self) -> CharList {
+        match self {
+            DLBNode::Leaf(data) => data.bytes().clone(),
+            DLBNode::Internal(data) => data.bytes().clone(),
+        }
+    }
+
     fn build_full_match(left: NodeDescription, right: NodeDescription) -> Self {
         // Order them according to length
         let (smallest, mut largest) = if left.1.len() < right.1.len() {
@@ -215,23 +222,38 @@ impl DLBNode {
             DLBNode::Internal(data) => {
                 println!("I am internal.");
                 println!("My callee pattern is {}", from_utf8(pattern).unwrap());
-                if pattern.len() == 0 {
-                    return data.maybe_id();
-                }
-                let my_pattern = from_utf8(data.bytes().as_slice()).unwrap();
-                println!("Comparing against my pattern {}…", my_pattern);
-                if data.bytes().as_slice() != pattern {
-                    println!("Not matching…");
-                    return None;
-                }
-                // Else, cut off the prefix from the pattern,
-                // and iterate over the children, ORing the results together.
-                let match_len = data.bytes().len();
-                let suffix = &pattern[match_len..];
-                for child in data.children() {
-                    if let Some(result) = child.get(&suffix) {
-                        return Some(result);
+                let similarity = data.bytes().count_shared_prefix(pattern);
+                let consumes_pattern_exactly = similarity == pattern.len();
+                let consumes_bytestring_exactly = similarity == data.bytes().len();
+                let no_match = similarity == 0;
+
+                match (
+                    no_match,
+                    consumes_pattern_exactly,
+                    consumes_bytestring_exactly,
+                ) {
+                    // Case 1: No match
+                    (true, _, _) => return None,
+                    // Case 2: Exact match.
+                    // In this case, we just need to check the IsComplete field
+                    // and perhaps update it.
+                    (false, true, true) => return data.maybe_id(),
+                    // Case 3: Matches pattern, bytes have leftover
+                    (false, true, false) => return None,
+                    // Case 4: Matches bytes, pattern has leftover
+                    (false, false, true) => {
+                        // Else, cut off the prefix from the pattern,
+                        // and iterate over the children, ORing the results together.
+                        let match_len = data.bytes().len();
+                        let suffix = &pattern[match_len..];
+                        for child in data.children() {
+                            if let Some(result) = child.get(&suffix) {
+                                return Some(result);
+                            }
+                        }
+                        return None;
                     }
+                    (false, false, false) => return None,
                 }
             }
         }

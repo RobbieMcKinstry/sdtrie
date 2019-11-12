@@ -27,7 +27,7 @@ impl DLB {
         self.root.len() == 0
     }
 
-    fn contains(&self, s: String) -> bool {
+    pub fn contains(&self, s: String) -> bool {
         // Check if the string is empty.
         if s.is_empty() {
             println!("String is empty!");
@@ -50,6 +50,7 @@ impl DLB {
     }
 
     pub fn get(&self, s: String) -> Option<Identifier> {
+        println!("Getting  string {}", s);
         if self.is_empty() {
             return None;
         }
@@ -60,6 +61,7 @@ impl DLB {
 
         let byte_pattern = s.as_bytes();
         for child in self.root.iter() {
+            println!("Checking child {}", child.bytes());
             if let Some(id) = child.get(byte_pattern) {
                 return Some(id);
             }
