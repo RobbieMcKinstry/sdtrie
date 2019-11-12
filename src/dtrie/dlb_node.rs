@@ -221,6 +221,7 @@ impl DLBNode {
             }
             DLBNode::Internal(data) => {
                 println!("I am internal.");
+
                 println!("My callee pattern is {}", from_utf8(pattern).unwrap());
                 let similarity = data.bytes().count_shared_prefix(pattern);
                 let consumes_pattern_exactly = similarity == pattern.len();

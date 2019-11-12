@@ -192,7 +192,7 @@ fn test_aaa_case6() {
 }
 
 #[test]
-fn test_reads_dictionary() {
+fn test_contains_dictionary() {
     let mut rng: ChaCha8Rng = SeedableRng::seed_from_u64(100);
     let mut dlb = DLB::new();
     let f = File::open("dictionaries/alphanumeric.txt").unwrap();
@@ -204,13 +204,43 @@ fn test_reads_dictionary() {
         words.push(content);
     }
 
+    words.as_mut_slice().shuffle(&mut rng);
+
+    for val in words.iter() {
+        dlb.get_or_intern(val.to_string());
+    }
+
+    for (idx, word) in words.iter().enumerate() {
+        let expected = true;
+        let observed = dlb.contains(word.to_string());
+        if expected != observed {
+            println!("Failed to recover word \"{}\" on step {}", word, idx);
+        }
+        assert_eq!(expected, observed);
+    }
+}
+
+#[test]
+fn test_reads_dictionary() {
+    let mut rng: ChaCha8Rng = SeedableRng::seed_from_u64(100);
+    let mut dlb = DLB::new();
+    let f = File::open("dictionaries/alphanumeric.txt").unwrap();
+    let file = BufReader::new(&f);
+    let mut words = Vec::with_capacity(466551);
+    println!("Reading file.");
+    for line in file.lines().take(22000) {
+        let content = line.unwrap().trim().to_owned();
+        println!("Reading line {}", content);
+        words.push(content);
+    }
+    words.as_mut_slice().shuffle(&mut rng);
+
     let mut tokens = Vec::with_capacity(466551);
     for val in words.iter() {
         let token = dlb.get_or_intern(val.to_string());
         tokens.push(token);
         // println!("Gen token {}", token);
     }
-    tokens.as_mut_slice().shuffle(&mut rng);
 
     for (idx, token) in tokens.into_iter().enumerate() {
         let expected = Some(words[idx].clone());
@@ -222,32 +252,6 @@ fn test_reads_dictionary() {
                 token,
                 expected.clone().unwrap(),
             );
-        }
-        assert_eq!(expected, observed);
-    }
-}
-
-#[test]
-fn test_contains_dictionary() {
-    let mut dlb = DLB::new();
-    let f = File::open("dictionaries/alphanumeric.txt").unwrap();
-    let file = BufReader::new(&f);
-    let mut words = Vec::with_capacity(466551);
-    println!("Reading file.");
-    for line in file.lines().take(22000) {
-        let content = line.unwrap().trim().to_owned();
-        words.push(content);
-    }
-
-    for val in words.iter() {
-        dlb.get_or_intern(val.to_string());
-    }
-
-    for (idx, word) in words.iter().enumerate() {
-        let expected = true;
-        let observed = dlb.contains(word.to_string());
-        if expected != observed {
-            println!("Failed to recover word \"{}\" on step {}", word, idx);
         }
         assert_eq!(expected, observed);
     }

@@ -51,6 +51,7 @@ impl DLB {
 
     pub fn get(&self, s: String) -> Option<Identifier> {
         println!("Getting  string {}", s);
+        println!("Can't wait to see my strings!");
         if self.is_empty() {
             return None;
         }
