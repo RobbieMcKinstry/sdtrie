@@ -1,10 +1,10 @@
-use sdtrie::dtrie::DLB;
+use sdtrie::dtrie::RadixTrie;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
 fn main() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let dictionary_path = "dictionaries/alphanumeric.txt";
     println!("Opening file…");
     let f = File::open(dictionary_path).unwrap();

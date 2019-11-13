@@ -9,21 +9,21 @@ use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Clone)]
-pub enum DLBNode {
+pub enum RadixNode {
     Leaf(LeafData),
     Internal(InternalData),
 }
 
 type NodeDescription = (Identifier, CharList);
 
-impl DLBNode {
+impl RadixNode {
     pub fn count_nodes(&self) -> u64 {
         match self {
-            DLBNode::Leaf(data) => {
+            RadixNode::Leaf(data) => {
                 println!("…counting leaf pattern={}.", data.bytes().to_string());
                 return 1;
             }
-            DLBNode::Internal(data) => {
+            RadixNode::Internal(data) => {
                 println!(
                     "…counting intern pattern={} with {} kids.",
                     data.bytes().to_string(),
@@ -40,8 +40,8 @@ impl DLBNode {
 
     pub fn bytes(&self) -> CharList {
         match self {
-            DLBNode::Leaf(data) => data.bytes().clone(),
-            DLBNode::Internal(data) => data.bytes().clone(),
+            RadixNode::Leaf(data) => data.bytes().clone(),
+            RadixNode::Internal(data) => data.bytes().clone(),
         }
     }
 
@@ -55,7 +55,7 @@ impl DLBNode {
         let remaining = largest.1.split_off(smallest.1.len());
         // Make a leaf with the remaining bytes.
         let leaf_data = LeafData::new(largest.0, remaining);
-        let leaf = DLBNode::Leaf(leaf_data);
+        let leaf = RadixNode::Leaf(leaf_data);
         // Now build the internal node.
         let child = vector![leaf];
         let internal_data = InternalData::new(smallest.1, Some(smallest.0), child);
@@ -64,7 +64,7 @@ impl DLBNode {
 
     pub fn insert(&mut self, mut pattern: CharList, next_id: &mut AtomicU64) -> Identifier {
         match self {
-            DLBNode::Leaf(data) => {
+            RadixNode::Leaf(data) => {
                 // Consume any if the characters in pattern which match on
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
@@ -105,15 +105,15 @@ impl DLBNode {
                 let mut pattern_copy = pattern.clone();
                 let pattern_leftover = pattern_copy.split_off(similarity);
                 let leaf_leftover = data.bytes().clone().split_off(similarity);
-                let pattern_leaf = DLBNode::Leaf(LeafData::new(id, pattern_leftover));
-                let existing_leaf = DLBNode::Leaf(LeafData::new(data.id(), leaf_leftover));
+                let pattern_leaf = RadixNode::Leaf(LeafData::new(id, pattern_leftover));
+                let existing_leaf = RadixNode::Leaf(LeafData::new(data.id(), leaf_leftover));
                 let children = vector![pattern_leaf, existing_leaf];
                 let internal_data = InternalData::new(pattern_copy, None, children);
-                let internal_node = DLBNode::Internal(internal_data);
+                let internal_node = RadixNode::Internal(internal_data);
                 *self = internal_node;
                 return id;
             }
-            DLBNode::Internal(data) => {
+            RadixNode::Internal(data) => {
                 // Consume any of the characters in pattern which match on
                 // data.bytes().
                 let similarity = data.similar_bytes(pattern.clone());
@@ -153,10 +153,10 @@ impl DLBNode {
                             data.children().clone(),
                         );
                         let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                        let second_layer = DLBNode::Internal(second_layer_data);
+                        let second_layer = RadixNode::Internal(second_layer_data);
                         let children = vector![second_layer];
                         let internal_data = InternalData::new(pattern, Some(id), children);
-                        *self = DLBNode::Internal(internal_data);
+                        *self = RadixNode::Internal(internal_data);
                         return id;
                     }
                     // Case 3: Similarity < pattern.len() && similarity == bytestring.len
@@ -172,7 +172,7 @@ impl DLBNode {
                                 // Make a new leaf and add it as a child.
                                 let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
                                 let new_leaf_data = LeafData::new(id, remaining);
-                                let new_leaf = DLBNode::Leaf(new_leaf_data);
+                                let new_leaf = RadixNode::Leaf(new_leaf_data);
                                 data.add_child(new_leaf);
                                 return id;
                             }
@@ -194,12 +194,12 @@ impl DLBNode {
                             data.children().clone(),
                         );
                         let id = Identifier::from(next_id.fetch_add(1, Ordering::Relaxed));
-                        let second_layer = DLBNode::Internal(second_layer_data);
+                        let second_layer = RadixNode::Internal(second_layer_data);
                         let new_leaf_data = LeafData::new(id, pattern_leftovers);
-                        let new_leaf = DLBNode::Leaf(new_leaf_data);
+                        let new_leaf = RadixNode::Leaf(new_leaf_data);
                         let children = vector![second_layer, new_leaf];
                         let internal_data = InternalData::new(pattern, None, children);
-                        *self = DLBNode::Internal(internal_data);
+                        *self = RadixNode::Internal(internal_data);
                         return id;
                     }
                     // Case 5: No match.
@@ -212,14 +212,14 @@ impl DLBNode {
     pub fn get(&self, pattern: &[u8]) -> Option<Identifier> {
         println!("Checking node…");
         match self {
-            DLBNode::Leaf(data) => {
+            RadixNode::Leaf(data) => {
                 println!("I am a leaf.");
                 // Check if the list matches the rest of the elements:
                 if data.bytes().as_slice() == pattern {
                     return Some(data.id());
                 }
             }
-            DLBNode::Internal(data) => {
+            RadixNode::Internal(data) => {
                 println!("I am internal.");
 
                 println!("My callee pattern is {}", from_utf8(pattern).unwrap());
@@ -270,8 +270,8 @@ impl DLBNode {
 
     pub fn size_of(&self) -> usize {
         match self {
-            DLBNode::Leaf(_) => size_of::<Self>(),
-            DLBNode::Internal(data) => {
+            RadixNode::Leaf(_) => size_of::<Self>(),
+            RadixNode::Internal(data) => {
                 size_of::<Self>()
                     + data
                         .children()
@@ -284,14 +284,14 @@ impl DLBNode {
 
     pub fn resolve(&self, id: Identifier, thus_far: CharList) -> Option<String> {
         match self {
-            DLBNode::Leaf(data) => {
+            RadixNode::Leaf(data) => {
                 if data.id() == id {
                     let result = thus_far.append(data.bytes().clone());
                     return Some(result.to_string());
                 }
                 return None;
             }
-            DLBNode::Internal(data) => {
+            RadixNode::Internal(data) => {
                 if let Some(internal_id) = data.maybe_id() {
                     if internal_id == id {
                         let result = thus_far.append(data.bytes().clone());
@@ -315,11 +315,11 @@ impl DLBNode {
     }
 }
 
-impl Matchable for DLBNode {
+impl Matchable for RadixNode {
     fn similar_bytes(&self, pattern: CharList) -> usize {
         match self {
-            DLBNode::Leaf(data) => data.similar_bytes(pattern),
-            DLBNode::Internal(data) => data.similar_bytes(pattern),
+            RadixNode::Leaf(data) => data.similar_bytes(pattern),
+            RadixNode::Internal(data) => data.similar_bytes(pattern),
         }
     }
 }

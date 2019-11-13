@@ -1,14 +1,14 @@
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha8Rng;
 use rand_core::SeedableRng;
-use sdtrie::dtrie::DLB;
+use sdtrie::dtrie::RadixTrie;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 
 #[test]
 fn test_count_nodes1() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     vec!["foo", "bar", "pop", "lizz"]
         .into_iter()
         .map(|s| String::from(s))
@@ -21,7 +21,7 @@ fn test_count_nodes1() {
 
 #[test]
 fn test_count_nodes2() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     vec!["fizz", "fang"]
         .into_iter()
         .map(|s| String::from(s))
@@ -34,7 +34,7 @@ fn test_count_nodes2() {
 
 #[test]
 fn test_count_nodes3() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     vec!["foo", "fuh", "fang"]
         .into_iter()
         .map(|s| String::from(s))
@@ -47,7 +47,7 @@ fn test_count_nodes3() {
 
 #[test]
 fn test_count_nodes4() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     vec!["foo", "fuh", "fizz", "fang"]
         .into_iter()
         .map(|s| String::from(s))
@@ -60,7 +60,7 @@ fn test_count_nodes4() {
 
 #[test]
 fn test_broken_case1() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("1080");
     let expected2 = String::from("10-point");
     let expected3 = String::from("10th");
@@ -85,7 +85,7 @@ fn test_broken_case1() {
 
 #[test]
 fn test_aaa_case1() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("a");
     let expected2 = String::from("aa");
     let expected3 = String::from("aaa");
@@ -103,7 +103,7 @@ fn test_aaa_case1() {
 
 #[test]
 fn test_aaa_case2() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("a");
     let expected2 = String::from("aaa");
     let expected3 = String::from("aa");
@@ -121,7 +121,7 @@ fn test_aaa_case2() {
 
 #[test]
 fn test_aaa_case3() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("aa");
     let expected2 = String::from("a");
     let expected3 = String::from("aaa");
@@ -139,7 +139,7 @@ fn test_aaa_case3() {
 
 #[test]
 fn test_aaa_case4() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("aa");
     let expected2 = String::from("aaa");
     let expected3 = String::from("a");
@@ -157,7 +157,7 @@ fn test_aaa_case4() {
 
 #[test]
 fn test_aaa_case5() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("aaa");
     let expected2 = String::from("a");
     let expected3 = String::from("aa");
@@ -175,7 +175,7 @@ fn test_aaa_case5() {
 
 #[test]
 fn test_aaa_case6() {
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let expected1 = String::from("aaa");
     let expected2 = String::from("aa");
     let expected3 = String::from("a");
@@ -194,7 +194,7 @@ fn test_aaa_case6() {
 #[test]
 fn test_contains_dictionary() {
     let mut rng: ChaCha8Rng = SeedableRng::seed_from_u64(100);
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let f = File::open("dictionaries/alphanumeric.txt").unwrap();
     let file = BufReader::new(&f);
     let mut words = Vec::with_capacity(466551);
@@ -223,7 +223,7 @@ fn test_contains_dictionary() {
 #[test]
 fn test_reads_dictionary() {
     let mut rng: ChaCha8Rng = SeedableRng::seed_from_u64(100);
-    let mut dlb = DLB::new();
+    let mut dlb = RadixTrie::new();
     let f = File::open("dictionaries/alphanumeric.txt").unwrap();
     let file = BufReader::new(&f);
     let mut words = Vec::with_capacity(466551);

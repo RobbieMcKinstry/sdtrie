@@ -1,20 +1,20 @@
 use crate::dtrie::char_list::CharList;
-use crate::dtrie::dlb_node::DLBNode;
 use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::matchable::Matchable;
+use crate::dtrie::radix_node::RadixNode;
 use crate::dtrie::Identifier;
 use std::mem::size_of;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub struct DLB {
-    root: Vec<DLBNode>,
+pub struct RadixTrie {
+    root: Vec<RadixNode>,
     next_id: AtomicU64,
     // if the empty string is an element,
     // then this field contains it's ID.
     contains_empty: Option<Identifier>,
 }
 
-impl DLB {
+impl RadixTrie {
     pub fn new() -> Self {
         return Self {
             root: vec![],
@@ -125,7 +125,7 @@ impl DLB {
         // Make a new leaf node.
         let id = self.new_id();
         let new_node_data = LeafData::new(id, bytes);
-        let new_leaf = DLBNode::Leaf(new_node_data);
+        let new_leaf = RadixNode::Leaf(new_node_data);
 
         self.root.push(new_leaf);
         id
@@ -148,7 +148,7 @@ impl DLB {
     fn add_new_leaf(&mut self, bytes: CharList) -> Identifier {
         let id = self.new_id();
         let new_leaf_data = LeafData::new(id, bytes);
-        let new_leaf = DLBNode::Leaf(new_leaf_data);
+        let new_leaf = RadixNode::Leaf(new_leaf_data);
         self.root.push(new_leaf);
         return id;
     }
@@ -196,7 +196,7 @@ mod tests {
     #[test]
     fn test_is_empty() {
         println!("Running empty test");
-        let dlb = DLB::new();
+        let dlb = RadixTrie::new();
         assert_eq!(dlb.is_empty(), true);
     }
 
@@ -204,7 +204,7 @@ mod tests {
     fn test_simple_get() {
         println!("Running simple get test");
         let string = "foo".to_owned();
-        let mut dlb = DLB::new();
+        let mut dlb = RadixTrie::new();
         let id = dlb.get_or_intern(string.clone());
         assert_eq!(dlb.is_empty(), false);
         let found = dlb.contains(string.clone());
@@ -217,7 +217,7 @@ mod tests {
     fn test_two_leaves() {
         println!("Running two leaves test");
         let strings = vec![String::from("foo"), String::from("boo")];
-        let mut dlb = DLB::new();
+        let mut dlb = RadixTrie::new();
         strings
             .clone()
             .into_iter()
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_not_contained() {
         println!("Running not contained test");
-        let mut dlb = DLB::new();
+        let mut dlb = RadixTrie::new();
         vec!["foo", "boo", "food", "god", "goodbye"]
             .into_iter()
             .map(|x| String::from(x))

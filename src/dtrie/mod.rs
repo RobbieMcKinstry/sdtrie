@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 
-pub use dlb::DLB;
 pub use identifier::Identifier;
 pub use matchable::Matchable;
+pub use radix::RadixTrie;
 
 mod char_list;
-mod dlb;
-mod dlb_node;
 mod identifier;
 mod internal_data;
 mod is_complete;
 mod leaf_data;
 mod matchable;
+mod radix;
+mod radix_node;

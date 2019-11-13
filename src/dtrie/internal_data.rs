@@ -1,6 +1,6 @@
 use crate::dtrie::char_list::CharList;
-use crate::dtrie::dlb_node::DLBNode;
 use crate::dtrie::is_complete::IsComplete;
+use crate::dtrie::radix_node::RadixNode;
 use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
 use im::Vector;
@@ -10,11 +10,11 @@ use std::sync::atomic::AtomicU64;
 pub struct InternalData {
     bytes: CharList,
     maybe_id: IsComplete,
-    children: Vector<DLBNode>,
+    children: Vector<RadixNode>,
 }
 
 impl InternalData {
-    pub fn new(bytes: CharList, complete: IsComplete, children: Vector<DLBNode>) -> Self {
+    pub fn new(bytes: CharList, complete: IsComplete, children: Vector<RadixNode>) -> Self {
         Self {
             bytes,
             children,
@@ -34,11 +34,11 @@ impl InternalData {
         self.maybe_id
     }
 
-    pub fn children(&self) -> &Vector<DLBNode> {
+    pub fn children(&self) -> &Vector<RadixNode> {
         &self.children
     }
 
-    pub fn add_child(&mut self, node: DLBNode) {
+    pub fn add_child(&mut self, node: RadixNode) {
         self.children.push_back(node);
     }
 
@@ -69,7 +69,7 @@ impl InternalData {
         (best_index, max)
     }
 
-    pub fn clone_children(&self) -> Vector<DLBNode> {
+    pub fn clone_children(&self) -> Vector<RadixNode> {
         self.children.clone()
     }
 
