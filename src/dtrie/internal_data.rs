@@ -1,20 +1,21 @@
 use crate::dtrie::char_list::CharList;
 use crate::dtrie::is_complete::IsComplete;
-use crate::dtrie::radix_node::RadixNode;
+use crate::dtrie::node::RadixNode;
+use crate::dtrie::value::RadixValue;
 use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
 use im::Vector;
 use std::sync::atomic::AtomicU64;
 
 #[derive(Clone)]
-pub struct InternalData {
+pub struct InternalData<T: RadixValue + Clone> {
     bytes: CharList,
     maybe_id: IsComplete,
-    children: Vector<RadixNode>,
+    children: Vector<RadixNode<T>>,
 }
 
-impl InternalData {
-    pub fn new(bytes: CharList, complete: IsComplete, children: Vector<RadixNode>) -> Self {
+impl<T: RadixValue + Clone> InternalData<T> {
+    pub fn new(bytes: CharList, complete: IsComplete, children: Vector<RadixNode<T>>) -> Self {
         Self {
             bytes,
             children,
@@ -34,11 +35,11 @@ impl InternalData {
         self.maybe_id
     }
 
-    pub fn children(&self) -> &Vector<RadixNode> {
+    pub fn children(&self) -> &Vector<RadixNode<T>> {
         &self.children
     }
 
-    pub fn add_child(&mut self, node: RadixNode) {
+    pub fn add_child(&mut self, node: RadixNode<T>) {
         self.children.push_back(node);
     }
 
@@ -69,7 +70,7 @@ impl InternalData {
         (best_index, max)
     }
 
-    pub fn clone_children(&self) -> Vector<RadixNode> {
+    pub fn clone_children(&self) -> Vector<RadixNode<T>> {
         self.children.clone()
     }
 
@@ -97,7 +98,7 @@ impl InternalData {
     }
 }
 
-impl Matchable for InternalData {
+impl<T: RadixValue + Clone> Matchable for InternalData<T> {
     fn similar_bytes(&self, pattern: CharList) -> usize {
         self.bytes().similar_bytes(pattern)
     }

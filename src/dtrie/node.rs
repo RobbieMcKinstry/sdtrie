@@ -1,6 +1,7 @@
 use crate::dtrie::char_list::CharList;
 use crate::dtrie::internal_data::InternalData;
 use crate::dtrie::leaf_data::LeafData;
+use crate::dtrie::value::RadixValue;
 use crate::dtrie::Identifier;
 use crate::dtrie::Matchable;
 use im::vector;
@@ -9,14 +10,14 @@ use std::str::from_utf8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Clone)]
-pub enum RadixNode {
+pub enum RadixNode<T: RadixValue + Clone> {
     Leaf(LeafData),
-    Internal(InternalData),
+    Internal(InternalData<T>),
 }
 
 type NodeDescription = (Identifier, CharList);
 
-impl RadixNode {
+impl<T: RadixValue + Clone> RadixNode<T> {
     pub fn count_nodes(&self) -> u64 {
         match self {
             RadixNode::Leaf(data) => {
@@ -209,21 +210,24 @@ impl RadixNode {
         }
     }
 
-    pub fn get(&self, pattern: &[u8]) -> Option<Identifier> {
+    pub fn get(&self, pattern: Vec<u8>) -> Option<Identifier> {
         println!("Checking node…");
         match self {
             RadixNode::Leaf(data) => {
                 println!("I am a leaf.");
                 // Check if the list matches the rest of the elements:
-                if data.bytes().as_slice() == pattern {
+                if data.bytes().as_slice() == pattern.as_slice() {
                     return Some(data.id());
                 }
             }
             RadixNode::Internal(data) => {
                 println!("I am internal.");
 
-                println!("My callee pattern is {}", from_utf8(pattern).unwrap());
-                let similarity = data.bytes().count_shared_prefix(pattern);
+                println!(
+                    "My callee pattern is {}",
+                    from_utf8(pattern.as_slice()).unwrap()
+                );
+                let similarity = data.bytes().count_shared_prefix(pattern.as_slice());
                 let consumes_pattern_exactly = similarity == pattern.len();
                 let consumes_bytestring_exactly = similarity == data.bytes().len();
                 let no_match = similarity == 0;
@@ -248,7 +252,7 @@ impl RadixNode {
                         let match_len = data.bytes().len();
                         let suffix = &pattern[match_len..];
                         for child in data.children() {
-                            if let Some(result) = child.get(&suffix) {
+                            if let Some(result) = child.get(suffix.to_vec()) {
                                 return Some(result);
                             }
                         }
@@ -261,7 +265,7 @@ impl RadixNode {
         None
     }
 
-    pub fn contains(&self, pattern: &[u8]) -> bool {
+    pub fn contains(&self, pattern: Vec<u8>) -> bool {
         match self.get(pattern) {
             Some(_) => true,
             None => false,
@@ -315,7 +319,7 @@ impl RadixNode {
     }
 }
 
-impl Matchable for RadixNode {
+impl<T: RadixValue + Clone> Matchable for RadixNode<T> {
     fn similar_bytes(&self, pattern: CharList) -> usize {
         match self {
             RadixNode::Leaf(data) => data.similar_bytes(pattern),

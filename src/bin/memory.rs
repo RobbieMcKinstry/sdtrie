@@ -4,7 +4,7 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 fn main() {
-    let mut dlb = RadixTrie::new();
+    let mut dlb: RadixTrie<&mut String> = RadixTrie::new();
     let dictionary_path = "dictionaries/alphanumeric.txt";
     println!("Opening file…");
     let f = File::open(dictionary_path).unwrap();

@@ -1,43 +1,43 @@
 use crate::dtrie::char_list::CharList;
 use crate::dtrie::leaf_data::LeafData;
 use crate::dtrie::matchable::Matchable;
-use crate::dtrie::radix_node::RadixNode;
+use crate::dtrie::node::RadixNode;
+use crate::dtrie::value::RadixValue;
 use crate::dtrie::Identifier;
 use std::mem::size_of;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub struct RadixTrie {
-    root: Vec<RadixNode>,
+pub struct RadixTrie<T: RadixValue + Clone> {
+    root: Vec<RadixNode<T>>,
     next_id: AtomicU64,
     // if the empty string is an element,
     // then this field contains it's ID.
     contains_empty: Option<Identifier>,
 }
 
-impl RadixTrie {
+impl<T: RadixValue + Clone> RadixTrie<T> {
     pub fn new() -> Self {
-        return Self {
+        Self {
             root: vec![],
             next_id: AtomicU64::new(1),
             contains_empty: None,
-        };
+        }
     }
 
     pub fn is_empty(&self) -> bool {
         self.root.len() == 0
     }
 
-    pub fn contains(&self, s: String) -> bool {
+    pub fn contains(&self, s: T) -> bool {
         // Check if the string is empty.
-        if s.is_empty() {
-            println!("String is empty!");
+        let byte_pattern = s.into();
+        if byte_pattern.is_empty() {
             return self.contains_empty.is_some();
         }
 
         // Handle general case
-        let byte_pattern = s.as_bytes();
         for child in self.root.iter() {
-            if child.contains(byte_pattern) {
+            if child.contains(byte_pattern.clone()) {
                 return true;
             }
         }
@@ -49,21 +49,19 @@ impl RadixTrie {
         Identifier::from(id)
     }
 
-    pub fn get(&self, s: String) -> Option<Identifier> {
-        println!("Getting  string {}", s);
-        println!("Can't wait to see my strings!");
+    pub fn get(&self, s: T) -> Option<Identifier> {
+        let byte_pattern = s.into();
         if self.is_empty() {
             return None;
         }
 
-        if s.is_empty() {
+        if byte_pattern.is_empty() {
             return self.contains_empty;
         }
 
-        let byte_pattern = s.as_bytes();
         for child in self.root.iter() {
             println!("Checking child {}", child.bytes());
-            if let Some(id) = child.get(byte_pattern) {
+            if let Some(id) = child.get(byte_pattern.to_vec()) {
                 return Some(id);
             }
         }
@@ -196,8 +194,8 @@ mod tests {
     #[test]
     fn test_is_empty() {
         println!("Running empty test");
-        let dlb = RadixTrie::new();
-        assert_eq!(dlb.is_empty(), true);
+        let radix: RadixTrie<String> = RadixTrie::new();
+        assert_eq!(radix.is_empty(), true);
     }
 
     #[test]

@@ -10,5 +10,6 @@ mod internal_data;
 mod is_complete;
 mod leaf_data;
 mod matchable;
+mod node;
 mod radix;
-mod radix_node;
+mod value;
